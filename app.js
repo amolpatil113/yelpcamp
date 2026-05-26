@@ -5,9 +5,14 @@ mongoose.connect('mongodb://127.0.0.1:27017/yelp-camp');
 const Campground = require('./models/campground');
 const app = express();
 const methodOverride = require('method-override');
+const passport=require('passport');
+const LocalStratergy=require('passport-local');
+const User=require('./models/user');
+
 const Review = require ('./models/review')
-const campgrounds=require('./routes/campground')
-const reviews =require('./routes/review')
+const userRoutes=require('./routes/userRoutes');
+const campgroundRoutes=require('./routes/campgroundRoutes.js')
+const reviewRoutes =require('./routes/reviewRoutes.js')
 
 app.use(express.static(path.join(__dirname, 'public')));
 const ejsMate=require('ejs-mate');
@@ -45,16 +50,30 @@ const sessionConfig={
 app.use(session(sessionConfig))
 app.use(flash());
 
+app.use(passport.initialize());
+app.use(passport.session());
+passport.use(new LocalStratergy(User.authenticate()));
+
+passport.serializeUser(User.serializeUser())
+passport.deserializeUser(User.deserializeUser())
+
 app.use((req,res,next)=>{
     res.locals.success=req.flash('success');
     res.locals.error=req.flash('error');
     next();
 })
-app.use('/campgrounds', campgrounds)
-app.use('/campgrounds/:id/reviews', reviews)
+app.get('/fakeUser',async(req,res)=>{
+    const user=new User({email:'colttt@gmail.com',username:'colttt'})
+    const newUser=await User.register(user,'chicken')
+    res.send(newUser);
+})
+
+app.use('/',userRoutes)
+app.use('/campgrounds', campgroundRoutes)
+app.use('/campgrounds/:id/reviews', reviewRoutes)
 app.use(express.static('public'))
 
-app.get('/',(req,res)=>{
+app.get('/',(req,res)=>{ 
     res.render('home')
 })
 
